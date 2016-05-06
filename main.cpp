@@ -1,8 +1,3 @@
-// incluimos <windows.h> caso estejamos usando esse sistema operacional
-#ifdef WIN32
-#include <windows.h>
-#endif
-
 // biblioteca do glut e algumas básicas de c++
 #include <GL/glui.h>
 #include <iostream>
@@ -96,17 +91,24 @@ string toString(int n)
 		return "0";
 
 	string s = "";
+	string t = "";
 
 	// adicionamos o último dígito do número (%10) ao final da string em cada iteração e continuamos enquanto n for diferente de 0
 	while (n)
 	{
 		// '0' é para passar o número pro padrão ANSI
-		s = s + (char) ('0' + n % 10);
+		s += (char) ('0' + n % 10);
 
 		// dividindo um int por 10, simplesmente descartamos seu último dígito. Ao dividir por 10 um int menor que 10, temos 0
 		n /= 10;
 	}
-	return s;
+
+	// como a string é escrita de trás pra frente devido ao funcionamento do while acima, é preciso invertê-la antes de retorná-la
+	int size = s.size();
+	for (int i = 0; i < size; i++)
+		t += s[size-i-1];
+
+	return t;
 }
 
 float dist(float a, float b, float c, float d)
@@ -164,11 +166,11 @@ void selectPoint(int x, int y, bool left)
 	}
 
 	// se a variável booleana 'left' for falsa, o botão direito foi clicado, o que significa que o ponto deve ser apagado
-	if (p >= 0 && !left)
+	if (p >= 0 && !left && verPontos)
 		erasePoint(p);
 
-	// se 'left' for verdadeira, o botão esquerdo foi clicado, o que significa que o usuário pode mover um ponto ou criar um novo
-	if (p >= 0 && left)
+	// se 'left' for verdadeira, o botão esquerdo foi clicado, o que significa que o usuário pode mover um ponto
+	if (p >= 0 && left && verPontos)
 		moving = p;
 
 	// caso 'p' seja -1, nenhum ponto foi selecionado pois todos estão muito longe. É criado um ponto novo então
@@ -381,6 +383,10 @@ void mouse(int button, int state, int x, int y)
 		selectPoint(x, y, true);
 	if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
 		selectPoint(x, y, false);
+
+	// quando o botão é solto, o usuário não pode mais mover os pontos
+	if (state == GLUT_UP)
+		moving = -1;
 }
 
 void motion(int x, int y)
@@ -392,16 +398,16 @@ void motion(int x, int y)
 	// a coordenada y é invertida por padrão
 	y = windowY - y;
 
-	// transformando as coordenadas da tela em coordenadas do ortho:
-	// Proporção = 'T'atual * ('O'final - 'O'inicial) / 'T'max
-	// O'atual' = (Proporção + 'O'inicial) / 'O'inicial = Proporção / 'O'inicial + 1
-	// a variável é multiplicada por -1 porque 'O'inicial é sempre negativo
-	float a = -(((float) x * (orthoDim[1] - orthoDim[0]) / (float) windowX) / orthoDim[0] + 1);
-	float b = -(((float) y * (orthoDim[3] - orthoDim[2]) / (float) windowY) / orthoDim[2] + 1);
-
 	// se o ponto está dentro da tela
-	if (a > orthoDim[0] && a < orthoDim[1] && b > orthoDim[2] && b < orthoDim[3])
+	if (x > 0 && x < windowX && y > 0 && y < windowY)
 	{
+		// transformando as coordenadas da tela em coordenadas do ortho:
+		// Proporção = 'T'atual * ('O'final - 'O'inicial) / 'T'max
+		// O'atual' = (Proporção + 'O'inicial) / 'O'inicial = Proporção / 'O'inicial + 1
+		// a variável é multiplicada por -1 porque 'O'inicial é sempre negativo
+		float a = -(((float) x * (orthoDim[1] - orthoDim[0]) / (float) windowX) / orthoDim[0] + 1);
+		float b = -(((float) y * (orthoDim[3] - orthoDim[2]) / (float) windowY) / orthoDim[2] + 1);
+
 		// atualiza a posição do ponto e manda a tela fazer o desenho de novo
 		pontos[moving][0] = a;
 		pontos[moving][1] = b;
